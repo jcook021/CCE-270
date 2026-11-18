@@ -3,8 +3,1386 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Web App</title>
+  <meta name="theme-color" content="#2E193D">
+  <title>Site Runoff | Map and Area Interactions</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --cream: #FFF4D6;
+      --aubergine: #2E193D;
+      --gold: #E7B63B;
+      --coral: #D94F4F;
+      --roof: #0072B2;
+      --pavement: #E69F00;
+      --lawn: #009E73;
+      --other: #CC79A7;
+      --ink: #30243A;
+      --muted: #716777;
+      --line: #E7DFD3;
+      --paper: #FFFEFA;
+      --shadow: 0 18px 48px rgba(46, 25, 61, 0.1);
+      font-family: ui-rounded, "Avenir Next", "Trebuchet MS", system-ui, sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 92% 17%, rgba(231, 182, 59, 0.15), transparent 25rem),
+        var(--cream);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .masthead {
+      position: relative;
+      overflow: hidden;
+      color: var(--cream);
+      background: var(--aubergine);
+    }
+
+    .masthead::before,
+    .masthead::after {
+      position: absolute;
+      content: "";
+      pointer-events: none;
+    }
+
+    .masthead::before {
+      top: -11rem;
+      right: 7%;
+      width: 31rem;
+      height: 31rem;
+      border: 1px solid rgba(255, 244, 214, 0.14);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 2.3rem rgba(255, 244, 214, 0.025),
+        0 0 0 5.2rem rgba(255, 244, 214, 0.025);
+    }
+
+    .masthead::after {
+      top: 2rem;
+      right: 15%;
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow:
+        5rem 1.8rem 0 0.15rem var(--coral),
+        9rem -0.5rem 0 0.1rem var(--gold),
+        13rem 2.8rem 0 0.2rem rgba(255, 244, 214, 0.8);
+    }
+
+    .masthead-inner,
+    main,
+    .footer-inner {
+      width: min(1440px, calc(100% - 48px));
+      margin-inline: auto;
+    }
+
+    .masthead-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding-block: 1.2rem 1rem;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      color: var(--cream);
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      position: relative;
+      display: grid;
+      width: 2.7rem;
+      height: 2.7rem;
+      place-items: center;
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      color: var(--gold);
+      font-size: 1.1rem;
+      font-weight: 900;
+    }
+
+    .brand-mark::after {
+      position: absolute;
+      inset: 0.38rem;
+      border: 1px solid rgba(255, 244, 214, 0.5);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .brand-name {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      display: block;
+      margin-top: 0.15rem;
+      color: rgba(255, 244, 214, 0.72);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .preview-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.55rem 0.8rem;
+      border: 1px solid rgba(255, 244, 214, 0.25);
+      border-radius: 999px;
+      color: var(--cream);
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .preview-badge::before {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--gold);
+      content: "";
+    }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 2rem;
+      padding: 1.1rem 0 2.2rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.65rem;
+      color: var(--gold);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 17ch;
+      margin-bottom: 0.55rem;
+      color: var(--cream);
+      font-size: clamp(2.15rem, 5vw, 4.1rem);
+      font-weight: 900;
+      letter-spacing: -0.055em;
+      line-height: 0.98;
+    }
+
+    .hero-copy {
+      max-width: 48rem;
+      margin-bottom: 0;
+      color: rgba(255, 244, 214, 0.75);
+      font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+      line-height: 1.55;
+    }
+
+    .hero-note {
+      flex: 0 0 auto;
+      max-width: 16rem;
+      padding: 0.8rem 1rem;
+      border-left: 3px solid var(--coral);
+      color: var(--cream);
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    main {
+      padding-block: 1.4rem 3.5rem;
+    }
+
+    .preview-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      margin-bottom: 1.1rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(217, 79, 79, 0.3);
+      border-radius: 0.8rem;
+      color: #742C35;
+      background: #FFF1EA;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .preview-banner strong {
+      color: #64212D;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.85fr);
+      align-items: start;
+      gap: 1.2rem;
+    }
+
+    .map-column,
+    .results-column {
+      display: grid;
+      gap: 1.2rem;
+      min-width: 0;
+    }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid rgba(46, 25, 61, 0.08);
+      border-radius: 1rem;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .card-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.15rem 1.2rem 0.9rem;
+    }
+
+    .card-heading h2,
+    .card-heading h3 {
+      margin-bottom: 0.25rem;
+      color: var(--aubergine);
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .card-heading p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .overline {
+      display: block;
+      margin-bottom: 0.38rem;
+      color: #80573A;
+      font-size: 0.65rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .map-status {
+      flex: 0 0 auto;
+      padding: 0.4rem 0.6rem;
+      border-radius: 999px;
+      color: #684715;
+      background: #FFF0C3;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .map-frame {
+      position: relative;
+      margin: 0 0.8rem;
+      overflow: hidden;
+      border: 1px solid #D7D1C4;
+      border-radius: 0.8rem;
+      background: #E7E5D9;
+    }
+
+    #site-map {
+      width: 100%;
+      height: min(58vw, 560px);
+      min-height: 360px;
+      background: #E7E5D9;
+    }
+
+    .map-chip {
+      position: absolute;
+      z-index: 800;
+      top: 0.8rem;
+      right: 0.8rem;
+      max-width: calc(100% - 1.6rem);
+      border: 1px solid rgba(46, 25, 61, 0.13);
+      border-radius: 0.55rem;
+      padding: 0.45rem 0.65rem;
+      background: rgba(255, 254, 250, 0.93);
+      box-shadow: 0 5px 16px rgba(46, 25, 61, 0.1);
+      color: var(--aubergine);
+      font-size: 0.68rem;
+      font-weight: 800;
+    }
+
+    .leaflet-tooltip.area-label {
+      border: 2px solid var(--aubergine);
+      border-radius: 999px;
+      padding: 0.2rem 0.45rem;
+      color: var(--aubergine);
+      background: var(--paper);
+      box-shadow: 0 2px 8px rgba(46, 25, 61, 0.18);
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .leaflet-tooltip.area-label::before {
+      display: none;
+    }
+
+    .map-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1.1rem 1rem;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .map-footer strong {
+      color: var(--aubergine);
+    }
+
+    .map-footer a {
+      color: var(--aubergine);
+      font-weight: 800;
+    }
+
+    .map-status.is-error {
+      color: #6D302E;
+      background: #FFE6D9;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem 1rem;
+      padding: 0.8rem 1.1rem 1rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #4B414F;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .swatch {
+      width: 0.9rem;
+      height: 0.9rem;
+      border: 1px solid rgba(46, 25, 61, 0.45);
+      border-radius: 0.25rem;
+    }
+
+    .input-card {
+      padding-bottom: 1rem;
+    }
+
+    .input-card .card-heading {
+      padding-bottom: 0.8rem;
+    }
+
+    .example-label {
+      padding: 0.35rem 0.55rem;
+      border-radius: 999px;
+      color: #6D302E;
+      background: #FFE6D9;
+      font-size: 0.65rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .input-form {
+      display: grid;
+      gap: 0.8rem;
+      padding-inline: 1.2rem;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(110px, 0.8fr);
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .input-row label,
+    .field-label {
+      color: #443849;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .input-hint {
+      display: block;
+      margin-top: 0.18rem;
+      color: var(--muted);
+      font-size: 0.67rem;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .input-row select,
+    .input-row input {
+      width: 100%;
+      min-height: 2.5rem;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid #D9D0C2;
+      border-radius: 0.55rem;
+      color: var(--ink);
+      background: #FFFCF5;
+      font-size: 0.79rem;
+      font-weight: 700;
+    }
+
+    .input-row input[readonly] {
+      color: #635A66;
+      background: #F3F0EA;
+    }
+
+    .area-name-button {
+      padding: 0;
+      border: 0;
+      color: var(--aubergine);
+      background: transparent;
+      font: inherit;
+      font-weight: 800;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-color: rgba(46, 25, 61, 0.35);
+      text-underline-offset: 0.18em;
+      cursor: pointer;
+    }
+
+    .area-name-button:hover,
+    .area-name-button:focus-visible {
+      color: #80573A;
+    }
+
+    .pending-area {
+      color: var(--muted);
+      font-size: 0.68rem;
+      white-space: nowrap;
+    }
+
+    .area-controls-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.68rem;
+      line-height: 1.45;
+    }
+
+    .form-note {
+      margin: 0;
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.55rem;
+      color: #5D4A2C;
+      background: #FFF4D6;
+      font-size: 0.68rem;
+      line-height: 1.45;
+    }
+
+    .area-card,
+    .summary-card,
+    .pipe-card,
+    .assumptions-card {
+      padding-bottom: 1rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      padding-inline: 1.2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      text-align: left;
+    }
+
+    th {
+      padding: 0.55rem 0.45rem;
+      border-bottom: 1px solid var(--line);
+      color: #766B79;
+      font-size: 0.63rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.7rem 0.45rem;
+      border-bottom: 1px solid #F0EBE3;
+      color: #3D3343;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    td:first-child {
+      color: var(--aubergine);
+      font-weight: 900;
+    }
+
+    tbody tr.is-selected td {
+      background: #FFF8E8;
+    }
+
+    .surface-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .surface-tag .swatch {
+      width: 0.65rem;
+      height: 0.65rem;
+    }
+
+    .table-totals {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.8rem 1.2rem 0;
+    }
+
+    .total-item {
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .total-item strong {
+      display: block;
+      margin-top: 0.18rem;
+      color: var(--aubergine);
+      font-size: 1.05rem;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+      padding-inline: 1.2rem;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 0.8rem;
+      border: 1px solid #EEE6DB;
+      border-radius: 0.7rem;
+      background: #FFFCF5;
+    }
+
+    .metric.highlight {
+      border-color: rgba(217, 79, 79, 0.25);
+      background: #FFF4EF;
+    }
+
+    .metric-label {
+      display: block;
+      color: #766B79;
+      font-size: 0.64rem;
+      font-weight: 900;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      display: block;
+      margin-top: 0.35rem;
+      color: var(--aubergine);
+      font-size: clamp(1.25rem, 2vw, 1.7rem);
+      font-weight: 900;
+      letter-spacing: -0.045em;
+      line-height: 1;
+    }
+
+    .metric-value small {
+      color: #615768;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .result-context {
+      margin: 0.8rem 1.2rem 0;
+      padding: 0.65rem 0.75rem;
+      border-left: 3px solid var(--gold);
+      color: #62586A;
+      background: #FFF8E8;
+      font-size: 0.7rem;
+      line-height: 1.45;
+    }
+
+    .pipe-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      padding-inline: 1.2rem;
+    }
+
+    .pipe-size {
+      color: var(--aubergine);
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.06em;
+    }
+
+    .pipe-size small {
+      font-size: 0.85rem;
+      letter-spacing: 0;
+    }
+
+    .status-pill {
+      padding: 0.45rem 0.65rem;
+      border-radius: 999px;
+      color: #225541;
+      background: #E2F3E9;
+      font-size: 0.65rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .capacity-track {
+      height: 0.55rem;
+      margin: 0.9rem 1.2rem 0.45rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #EAE3D8;
+    }
+
+    .capacity-fill {
+      width: 76%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--gold), var(--coral));
+    }
+
+    .capacity-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-inline: 1.2rem;
+      color: var(--muted);
+      font-size: 0.68rem;
+    }
+
+    .pipe-details {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+      padding: 1rem 1.2rem 0;
+    }
+
+    .pipe-detail {
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .pipe-detail span {
+      display: block;
+      color: #766B79;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .pipe-detail strong {
+      display: block;
+      margin-top: 0.2rem;
+      color: var(--aubergine);
+      font-size: 0.85rem;
+    }
+
+    .assumptions-card {
+      border-color: rgba(46, 25, 61, 0.15);
+      background: #F7F1E7;
+      box-shadow: none;
+    }
+
+    .assumptions-list {
+      display: grid;
+      gap: 0.55rem;
+      margin: 0;
+      padding: 0 1.2rem;
+      list-style: none;
+    }
+
+    .assumptions-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      color: #5E5363;
+      font-size: 0.7rem;
+      line-height: 1.4;
+    }
+
+    .assumptions-list strong {
+      color: var(--aubergine);
+      text-align: right;
+    }
+
+    .footer {
+      padding: 1.1rem 0 1.7rem;
+      color: #695F6C;
+      font-size: 0.68rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(46, 25, 61, 0.16);
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .results-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+      }
+
+      .area-card {
+        grid-row: span 2;
+      }
+    }
+
+    @media (max-width: 660px) {
+      .masthead-inner,
+      main,
+      .footer-inner {
+        width: min(100% - 28px, 1440px);
+      }
+
+      .masthead-inner {
+        padding-top: 0.9rem;
+      }
+
+      .preview-badge {
+        font-size: 0.58rem;
+        padding: 0.45rem 0.55rem;
+      }
+
+      .hero {
+        display: block;
+        padding-top: 0.6rem;
+      }
+
+      .hero-note {
+        max-width: none;
+        margin-top: 1rem;
+      }
+
+      main {
+        padding-top: 1rem;
+      }
+
+      .results-column {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .area-card {
+        grid-row: auto;
+      }
+
+      .card-heading {
+        padding-inline: 0.95rem;
+      }
+
+      .input-form,
+      .table-wrap,
+      .result-grid,
+      .pipe-topline,
+      .capacity-caption,
+      .pipe-details,
+      .assumptions-list {
+        padding-inline: 0.95rem;
+      }
+
+      .map-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding-inline: 0.95rem;
+      }
+
+      .legend {
+        padding-inline: 0.95rem;
+      }
+
+      .result-context {
+        margin-inline: 0.95rem;
+      }
+
+      .capacity-track {
+        margin-inline: 0.95rem;
+      }
+
+      .footer-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 410px) {
+      .input-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.35rem;
+      }
+
+      .input-row select,
+      .input-row input {
+        min-height: 2.7rem;
+      }
+
+      .pipe-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
 </head>
 <body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="brand" href="#" aria-label="Site Runoff">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>
+          <span class="brand-name">Site Runoff</span>
+          <span class="brand-subtitle">A small-site drainage study</span>
+        </span>
+      </a>
+      <span class="preview-badge">Stage 02 · Map interactions</span>
+    </div>
+    <div class="masthead-inner hero">
+      <div>
+        <p class="eyebrow">Provo, Utah · Concept workspace</p>
+        <h1>Plan with a clear view.</h1>
+        <p class="hero-copy">Outline a site, review its surface areas, and preview the stormwater results in one place.</p>
+      </div>
+      <div class="hero-note">A bold, abstract stage-inspired theme frames the work. The map and its data stay center stage.</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="preview-banner" role="note">
+      <span aria-hidden="true">!</span>
+      <div><strong>Map interactions are live.</strong> Draw, edit, delete, name, and reclassify areas. Acreage, runoff, and pipe outputs are not calculated yet; result values remain fixed examples.</div>
+    </div>
+
+    <div class="workspace">
+      <div class="map-column">
+        <section class="card" aria-labelledby="map-title">
+          <div class="card-heading">
+            <div>
+              <span class="overline">Site plan</span>
+              <h2 id="map-title">Area map</h2>
+              <p>Provo, Utah · live satellite imagery · use the map toolbar to manage areas</p>
+            </div>
+            <span class="map-status">Satellite map</span>
+          </div>
+          <div class="map-frame">
+            <div id="site-map" role="application" aria-label="Interactive satellite map centered on Provo, Utah"></div>
+            <span class="map-chip">Provo, Utah · area map</span>
+          </div>
+          <div class="map-footer">
+            <span id="map-status" class="map-status" role="status" aria-live="polite">Loading satellite imagery…</span>
+            <span>Imagery streamed from <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener noreferrer">Esri World Imagery</a>; tiles are not exported.</span>
+          </div>
+          <div class="legend" aria-label="Surface type legend">
+            <span class="legend-item"><span class="swatch" style="background:#0072B2"></span>Roof</span>
+            <span class="legend-item"><span class="swatch" style="background:#E69F00"></span>Pavement / asphalt</span>
+            <span class="legend-item"><span class="swatch" style="background:#009E73"></span>Lawn</span>
+            <span class="legend-item"><span class="swatch" style="background:#CC79A7"></span>Other</span>
+          </div>
+        </section>
+
+        <section class="card area-card" aria-labelledby="area-table-title">
+          <div class="card-heading">
+            <div>
+              <span class="overline">Mapped surfaces</span>
+              <h2 id="area-table-title">Area schedule</h2>
+              <p>Select a row or polygon to edit its name, surface, or C value.</p>
+            </div>
+            <span class="map-status">Live areas</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">ID / name</th>
+                  <th scope="col">Surface</th>
+                  <th scope="col">C</th>
+                  <th scope="col">Area</th>
+                </tr>
+              </thead>
+              <tbody id="area-rows">
+                <tr>
+                  <td><button class="area-name-button" type="button">A1 · North lot</button></td>
+                  <td><span class="surface-tag"><span class="swatch" style="background:#E69F00"></span>Pavement / asphalt</span></td>
+                  <td>0.90</td>
+                  <td><span class="pending-area">Pending · Stage 4</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-totals">
+            <div class="total-item">Total area<strong>Pending · Stage 4</strong></div>
+            <div class="total-item">Weighted C<strong>Mock value · 0.90</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="results-column" aria-label="Model inputs and results">
+        <section class="card input-card" aria-labelledby="inputs-title">
+          <div class="card-heading">
+            <div>
+              <span class="overline">Scenario controls</span>
+              <h2 id="inputs-title">Inputs</h2>
+              <p>Values are examples and are not connected to results.</p>
+            </div>
+            <span class="example-label">Preview only</span>
+          </div>
+          <div class="input-form" role="group" aria-label="Interactive area controls and example model inputs">
+            <div>
+              <span class="field-label">Site areas</span>
+              <span class="input-hint">Use the map toolbar to draw, edit, or delete polygons. IDs are assigned in order.</span>
+            </div>
+            <div class="input-row">
+              <label for="area-name">Area name <span class="input-hint">Optional · selected area</span></label>
+              <input id="area-name" name="area-name" type="text" maxlength="60" value="North lot">
+            </div>
+            <div class="input-row">
+              <label for="surface">Surface type<span class="input-hint">Selected area</span></label>
+              <select id="surface" name="surface">
+                <option value="roof">Roof</option>
+                <option value="asphalt" selected>Pavement / asphalt</option>
+                <option value="lawn">Lawn</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="input-row">
+              <label for="coefficient">Runoff coefficient C<span class="input-hint">Dimensionless · 0 to 1 · asphalt example preset 0.90; other presets are deferred to Stage 3</span></label>
+              <input id="coefficient" name="coefficient" type="number" min="0" max="1" step="0.01" value="0.90">
+            </div>
+            <p id="area-selection-status" class="area-controls-note" role="status" aria-live="polite">Selected area A1. Changes affect only this area; results remain mock values.</p>
+            <div class="input-row">
+              <label for="storm">Design storm<span class="input-hint">Return period</span></label>
+              <select id="storm" name="storm">
+                <option>2 years</option>
+                <option selected>10 years</option>
+                <option>25 years</option>
+                <option>100 years</option>
+              </select>
+            </div>
+            <div class="input-row">
+              <label for="tc">Time of concentration Tc<span class="input-hint">Minutes · table range only</span></label>
+              <input id="tc" name="tc" type="number" min="1" step="1" value="15">
+            </div>
+            <div class="input-row">
+              <label for="slope">Pipe slope<span class="input-hint">Provisional range: 0.1–10%</span></label>
+              <input id="slope" name="slope" type="number" min="0.1" max="10" step="0.1" value="1.0">
+            </div>
+            <div class="input-row">
+              <label for="roughness">Manning roughness n<span class="input-hint">Provisional smooth-concrete assumption</span></label>
+              <input id="roughness" name="roughness" type="text" value="0.013" readonly>
+            </div>
+            <p class="form-note">The rainfall table, surface presets, and pipe catalog are not configured. This preview does not validate inputs.</p>
+          </div>
+        </section>
+
+        <section class="card summary-card" aria-labelledby="runoff-title">
+          <div class="card-heading">
+            <div>
+              <span class="overline">Runoff summary</span>
+              <h2 id="runoff-title">Peak flow</h2>
+              <p>Fixed example from the validation case.</p>
+            </div>
+            <span class="map-status">10-year</span>
+          </div>
+          <div class="result-grid">
+            <div class="metric">
+              <span class="metric-label">Design storm</span>
+              <strong class="metric-value">10 <small>years</small></strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Tc</span>
+              <strong class="metric-value">15 <small>min*</small></strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Rainfall intensity i</span>
+              <strong class="metric-value">3.00 <small>in/hr</small></strong>
+            </div>
+            <div class="metric highlight">
+              <span class="metric-label">Peak flow Qpeak</span>
+              <strong class="metric-value">2.72 <small>cfs</small></strong>
+            </div>
+          </div>
+          <p class="result-context">*Tc and rainfall intensity are illustrative placeholders; no IDF lookup is connected.</p>
+        </section>
+
+        <section class="card pipe-card" aria-labelledby="pipe-title">
+          <div class="card-heading">
+            <div>
+              <span class="overline">Pipe sizing</span>
+              <h2 id="pipe-title">Example selection</h2>
+              <p>Static capacity check · catalog not configured</p>
+            </div>
+          </div>
+          <div class="pipe-topline">
+            <strong class="pipe-size">12 <small>in nominal</small></strong>
+            <span class="status-pill">Example pass</span>
+          </div>
+          <div class="capacity-track" role="img" aria-label="Illustrative full-pipe capacity is greater than the example peak flow">
+            <div class="capacity-fill"></div>
+          </div>
+          <div class="capacity-caption">
+            <span>Required Qpeak <strong>2.72 cfs</strong></span>
+            <span>Capacity <strong>3.56 cfs</strong></span>
+          </div>
+          <div class="pipe-details">
+            <div class="pipe-detail"><span>Pipe slope</span><strong>1.00%</strong></div>
+            <div class="pipe-detail"><span>Manning n</span><strong>0.013</strong></div>
+            <div class="pipe-detail"><span>Flow condition</span><strong>Full pipe</strong></div>
+          </div>
+          <p class="result-context">The size is illustrative; the smallest adequate catalog size cannot be confirmed until the catalog is supplied.</p>
+        </section>
+
+        <section class="card assumptions-card" aria-labelledby="assumptions-title">
+          <div class="card-heading">
+            <div>
+              <span class="overline">Transparency</span>
+              <h2 id="assumptions-title">Assumptions &amp; sources</h2>
+              <p>Placeholders are identified rather than implied to be official.</p>
+            </div>
+          </div>
+          <ul class="assumptions-list">
+            <li><span>Rainfall table</span><strong>Provo · not configured</strong></li>
+            <li><span>Pipe-size catalog</span><strong>Placeholder</strong></li>
+            <li><span>Area basis</span><strong>UTM Zone 12N</strong></li>
+            <li><span>Manning roughness</span><strong>n = 0.013 · provisional</strong></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span>Site Runoff · Stage two map interactions</span>
+      <span>Area edits are temporary; refresh restores the sample area.</span>
+    </div>
+  </footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script>
+    (() => {
+      const mapStatus = document.getElementById("map-status");
+      const areaRows = document.getElementById("area-rows");
+      const areaNameInput = document.getElementById("area-name");
+      const surfaceInput = document.getElementById("surface");
+      const coefficientInput = document.getElementById("coefficient");
+      const selectionStatus = document.getElementById("area-selection-status");
+      const surfaceTypes = {
+        roof: { label: "Roof", color: "#0072B2", outline: "#004C78" },
+        asphalt: { label: "Pavement / asphalt", color: "#E69F00", outline: "#805214" },
+        lawn: { label: "Lawn", color: "#009E73", outline: "#006B4E" },
+        other: { label: "Other", color: "#CC79A7", outline: "#8C4B70" }
+      };
+      const surfaceDefaults = { roof: "", asphalt: "0.90", lawn: "", other: "" };
+      const areas = [];
+      let nextAreaNumber = 2;
+      let selectedAreaId = null;
+      let imageryFailed = false;
+
+      function setMapStatus(message, isError = false) {
+        mapStatus.textContent = message;
+        mapStatus.classList.toggle("is-error", isError);
+      }
+
+      function findArea(areaId) {
+        return areas.find((area) => area.id === areaId) || null;
+      }
+
+      function getAreaStyle(area, isSelected = false) {
+        const surface = surfaceTypes[area.surface];
+        return {
+          color: isSelected ? "#2E193D" : surface.outline,
+          fillColor: surface.color,
+          fillOpacity: isSelected ? 0.5 : 0.38,
+          weight: isSelected ? 4 : 2.5,
+          dashArray: isSelected ? "6 4" : null
+        };
+      }
+
+      function updateAreaStyles() {
+        areas.forEach((area) => {
+          area.layer.setStyle(getAreaStyle(area, area.id === selectedAreaId));
+        });
+      }
+
+      function renderAreaSchedule() {
+        const rows = areas.map((area) => {
+          const row = document.createElement("tr");
+          if (area.id === selectedAreaId) row.classList.add("is-selected");
+
+          const nameCell = document.createElement("td");
+          const selectButton = document.createElement("button");
+          selectButton.className = "area-name-button";
+          selectButton.type = "button";
+          selectButton.dataset.areaId = area.id;
+          selectButton.textContent = area.name ? `${area.id} · ${area.name}` : area.id;
+          nameCell.append(selectButton);
+
+          const surfaceCell = document.createElement("td");
+          const surfaceTag = document.createElement("span");
+          surfaceTag.className = "surface-tag";
+          const swatch = document.createElement("span");
+          swatch.className = "swatch";
+          swatch.style.backgroundColor = surfaceTypes[area.surface].color;
+          surfaceTag.append(swatch, document.createTextNode(surfaceTypes[area.surface].label));
+          surfaceCell.append(surfaceTag);
+
+          const coefficientCell = document.createElement("td");
+          coefficientCell.textContent = area.coefficient === "" ? "—" : area.coefficient;
+
+          const areaCell = document.createElement("td");
+          const pendingValue = document.createElement("span");
+          pendingValue.className = "pending-area";
+          pendingValue.textContent = "Pending · Stage 4";
+          areaCell.append(pendingValue);
+
+          row.append(nameCell, surfaceCell, coefficientCell, areaCell);
+          return row;
+        });
+        areaRows.replaceChildren(...rows);
+      }
+
+      function updateAreaControls() {
+        const area = findArea(selectedAreaId);
+        const isDisabled = !area;
+        areaNameInput.disabled = isDisabled;
+        surfaceInput.disabled = isDisabled;
+        coefficientInput.disabled = isDisabled;
+
+        if (!area) {
+          areaNameInput.value = "";
+          surfaceInput.value = "other";
+          coefficientInput.value = "";
+          selectionStatus.textContent = "Draw or select an area to edit its details.";
+          return;
+        }
+
+        areaNameInput.value = area.name;
+        surfaceInput.value = area.surface;
+        coefficientInput.value = area.coefficient;
+        selectionStatus.textContent = `Selected area ${area.id}. Changes affect only this area; results remain mock values.`;
+      }
+
+      function selectArea(areaId) {
+        selectedAreaId = findArea(areaId) ? areaId : null;
+        updateAreaControls();
+        updateAreaStyles();
+        renderAreaSchedule();
+      }
+
+      function addArea(layer, areaId, name, surface, coefficient) {
+        const area = { id: areaId, name, surface, coefficient, layer };
+        layer.setStyle(getAreaStyle(area));
+        layer.bindTooltip(areaId, {
+          permanent: true,
+          direction: "center",
+          className: "area-label"
+        });
+        layer.on("click", () => selectArea(areaId));
+        layer.addTo(drawnAreas);
+        areas.push(area);
+        return area;
+      }
+
+      function createAreaId() {
+        const areaId = `A${nextAreaNumber}`;
+        nextAreaNumber += 1;
+        return areaId;
+      }
+
+      if (!window.L) {
+        setMapStatus("The map library did not load. Check the network connection and reload.", true);
+        return;
+      }
+
+      const map = L.map("site-map", {
+        center: [40.2338, -111.6585],
+        zoom: 18,
+        minZoom: 3,
+        maxZoom: 19
+      });
+      const imagery = L.tileLayer(
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 19,
+          attribution: "Imagery © Esri, Vantor, Earthstar Geographics, and the GIS User Community"
+        }
+      ).addTo(map);
+      const drawnAreas = L.featureGroup().addTo(map);
+      const drawingAvailable = Boolean(L.Control && L.Control.Draw && L.Draw && L.Draw.Event);
+
+      imagery.on("load", () => {
+        if (!imageryFailed) setMapStatus("Satellite imagery loaded");
+      });
+      imagery.on("tileerror", () => {
+        imageryFailed = true;
+        setMapStatus("Some imagery tiles failed to load. Check the network connection.", true);
+      });
+
+      addArea(
+        L.polygon([
+          [40.2343, -111.6594],
+          [40.2343, -111.6586],
+          [40.2337, -111.6586],
+          [40.2337, -111.6594]
+        ]),
+        "A1",
+        "North lot",
+        "asphalt",
+        surfaceDefaults.asphalt
+      );
+      selectArea("A1");
+
+      if (drawingAvailable) {
+        new L.Control.Draw({
+          position: "topleft",
+          draw: {
+            polygon: {
+              allowIntersection: false,
+              repeatMode: false,
+              showArea: false,
+              shapeOptions: getAreaStyle({ surface: "other" })
+            },
+            polyline: false,
+            rectangle: false,
+            circle: false,
+            marker: false,
+            circlemarker: false
+          },
+          edit: {
+            featureGroup: drawnAreas
+          }
+        }).addTo(map);
+
+        map.on(L.Draw.Event.CREATED, (event) => {
+          const areaId = createAreaId();
+          addArea(event.layer, areaId, "", "other", "");
+          selectArea(areaId);
+          selectionStatus.textContent = `Created ${areaId}. Add an optional name or choose a surface type.`;
+        });
+
+        map.on(L.Draw.Event.EDITED, () => {
+          selectionStatus.textContent = "Area geometry updated. Acreage is pending Stage 4.";
+        });
+
+        map.on(L.Draw.Event.DELETED, (event) => {
+          const removedLayers = [];
+          event.layers.eachLayer((layer) => removedLayers.push(layer));
+          const removedIds = areas
+            .filter((area) => removedLayers.includes(area.layer))
+            .map((area) => area.id);
+          for (let index = areas.length - 1; index >= 0; index -= 1) {
+            if (removedIds.includes(areas[index].id)) areas.splice(index, 1);
+          }
+          if (removedIds.includes(selectedAreaId)) {
+            selectArea(areas.length ? areas[0].id : null);
+          } else {
+            updateAreaControls();
+            renderAreaSchedule();
+          }
+          selectionStatus.textContent = areas.length
+            ? `Deleted ${removedIds.join(", ")}. Selected area ${selectedAreaId}.`
+            : "No areas remain. Draw a polygon to add one.";
+        });
+      } else {
+        setMapStatus("The map loaded, but drawing tools did not. Check the network connection and reload.", true);
+      }
+
+      areaRows.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-area-id]");
+        if (!button) return;
+        const area = findArea(button.dataset.areaId);
+        if (!area) return;
+        selectArea(area.id);
+        map.fitBounds(area.layer.getBounds(), { maxZoom: 19, padding: [24, 24] });
+      });
+
+      areaNameInput.addEventListener("input", () => {
+        const area = findArea(selectedAreaId);
+        if (!area) return;
+        area.name = areaNameInput.value.trim();
+        renderAreaSchedule();
+      });
+
+      surfaceInput.addEventListener("change", () => {
+        const area = findArea(selectedAreaId);
+        if (!area) return;
+        area.surface = surfaceInput.value;
+        area.coefficient = surfaceDefaults[area.surface];
+        coefficientInput.value = area.coefficient;
+        updateAreaStyles();
+        renderAreaSchedule();
+      });
+
+      coefficientInput.addEventListener("input", () => {
+        const area = findArea(selectedAreaId);
+        if (!area) return;
+        area.coefficient = coefficientInput.value;
+        renderAreaSchedule();
+      });
+
+    })();
+  </script>
 </body>
 </html>
