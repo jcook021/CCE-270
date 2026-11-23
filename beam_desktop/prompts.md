@@ -30,4 +30,4 @@
   - Worked: Yes. Verified the default simply supported values and a cantilever reaction/moment readout; all 8 calculation tests pass.
 - Asked: Commit the changes.
   - Changed: Added this prompt-log entry and prepared the Beam Designer app, calculation module, tests, and setup docs for commit.
-  - Worked: Pending commit verification.
+  - Worked: Yes. Beam Designer implementation committed as ff2fa86.
