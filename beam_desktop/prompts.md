@@ -31,3 +31,9 @@
 - Asked: Commit the changes.
   - Changed: Added this prompt-log entry and prepared the Beam Designer app, calculation module, tests, and setup docs for commit.
   - Worked: Yes. Beam Designer implementation committed as ff2fa86.
+- Asked: Run all validation cases in spec.md against beam calculations and report expected versus actual values.
+  - Changed: Ran all five cases directly through beam_calculations.py and compared reactions, shear, moment, stress, deflection, limits, and checks with the specification.
+  - Worked: Yes. All 8 calculation regression tests also pass.
+- Asked: Commit please.
+  - Changed: Committed the Beam Designer validation results and this prompt-log entry.
+  - Worked: Yes.
