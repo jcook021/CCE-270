@@ -1,0 +1,6 @@
+- Asked: Create an AGENTS.md at the top level of the project containing the prompt-log instruction.
+  - Changed: Created beam_desktop/AGENTS.md.
+  - Worked: Yes.
+- Asked: Commit changes.
+  - Changed: Added this log entry and committed the staged project changes.
+  - Worked: Yes.

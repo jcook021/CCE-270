@@ -10,5 +10,3 @@ Save new files in the folder that matches their purpose:
 - `03_output/` for screenshots and exported results.
 
 Each numbered folder has a `README.md` describing its contents. Do not put app assets or supporting files at the root unless they are one of the designated root files.
-
-Commit after every prompt
