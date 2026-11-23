@@ -37,3 +37,15 @@
 - Asked: Commit please.
   - Changed: Committed the Beam Designer validation results and this prompt-log entry.
   - Worked: Yes.
+- Asked: Implement the new spec feature to save beam information to a file and open it again.
+  - Changed: Added versioned JSON beam-design persistence, File menu Open/Save actions, full input restoration, validation, and error dialogs.
+  - Worked: Yes. All 11 unit tests pass, and the Tkinter save/open round-trip restores the saved beam settings and loads.
+- Asked: Implement the Export results feature.
+  - Changed: Added an Export results CSV button that writes each beam-analysis sample's x, shear, moment, and deflection values in an Excel-friendly UTF-8 CSV.
+  - Worked: Yes. All 12 unit tests pass, and the Tkinter export button produced a CSV with the expected columns and every analysis sample.
+- Asked: Implement the Calculation sheet feature.
+  - Changed: Added a PDF export button and printable calculation-sheet generation with inputs, reactions, beam/response diagrams, and check summaries.
+  - Worked: Yes. All 13 tests pass, and the Tkinter button generated a valid PDF calculation sheet.
+- Asked: Commit please.
+  - Changed: Committed the Save/Open, CSV export, and Calculation sheet features with their tests and documentation.
+  - Worked: Yes.

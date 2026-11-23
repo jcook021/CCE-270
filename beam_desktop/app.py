@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 import tkinter as tk
-from tkinter import ttk
+from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
 
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -22,6 +23,9 @@ from beam_calculations import (
     analyze_beam,
     lightest_passing_section,
 )
+from beam_calculation_sheet import export_calculation_sheet_pdf
+from beam_design_io import BeamDesign, load_design, save_design, validate_design
+from beam_results_export import export_results_csv
 
 
 @dataclass
@@ -57,11 +61,31 @@ class BeamDesignerApp:
         self._analysis: BeamAnalysis | None = None
         self._analysis_inputs: tuple | None = None
         self._suggested_section = None
+        self.current_design_path: Path | None = None
 
         self._configure_styles()
+        self._build_menu()
         self._build_layout()
         self._add_uniform_load(default=True)
         self._schedule_recalculate()
+
+    def _build_menu(self) -> None:
+        menu = tk.Menu(self.root)
+        file_menu = tk.Menu(menu, tearoff=False)
+        file_menu.add_command(
+            label="Open...",
+            accelerator="Ctrl+O",
+            command=self._open_design,
+        )
+        file_menu.add_command(
+            label="Save",
+            accelerator="Ctrl+S",
+            command=self._save_design,
+        )
+        menu.add_cascade(label="File", menu=file_menu)
+        self.root.configure(menu=menu)
+        self.root.bind_all("<Control-o>", lambda _event: self._open_design())
+        self.root.bind_all("<Control-s>", lambda _event: self._save_design())
 
     def _configure_styles(self) -> None:
         style = ttk.Style()
@@ -254,6 +278,20 @@ class BeamDesignerApp:
             state=tk.DISABLED,
         )
         self.use_section_button.pack(side=tk.LEFT)
+        self.export_results_button = ttk.Button(
+            suggestion,
+            text="Export results CSV...",
+            command=self._export_results,
+            state=tk.DISABLED,
+        )
+        self.export_results_button.pack(side=tk.LEFT, padx=(8, 0))
+        self.calculation_sheet_button = ttk.Button(
+            suggestion,
+            text="Calculation sheet PDF...",
+            command=self._export_calculation_sheet,
+            state=tk.DISABLED,
+        )
+        self.calculation_sheet_button.pack(side=tk.LEFT, padx=(8, 0))
 
         reaction_card = ttk.LabelFrame(
             parent,
@@ -429,6 +467,164 @@ class BeamDesignerApp:
         if self.section_var.get() not in names:
             self.section_var.set(names[0] if material != "Steel" else "W12x26")
 
+    def _design_from_ui(self) -> BeamDesign:
+        point_loads: list[PointLoad] = []
+        uniform_loads: list[UniformLoad] = []
+        for row in self.rows:
+            magnitude = float(row.magnitude_var.get())
+            position = float(row.position_var.get())
+            if row.kind == "point":
+                point_loads.append(PointLoad(magnitude, position))
+            else:
+                if row.end_var is None:
+                    raise ValueError("Uniform load end position is missing.")
+                uniform_loads.append(
+                    UniformLoad(magnitude, position, float(row.end_var.get()))
+                )
+        ratio = {"L/240": 240, "L/360": 360}.get(self.deflection_ratio_var.get())
+        if ratio is None:
+            raise ValueError("Select a deflection limit of L/240 or L/360.")
+        design = BeamDesign(
+            span_ft=float(self.span_entry_var.get()),
+            support_type=self.support_var.get(),  # type: ignore[arg-type]
+            material=self.material_var.get(),  # type: ignore[arg-type]
+            section_name=self.section_var.get(),
+            deflection_ratio=ratio,
+            point_loads=tuple(point_loads),
+            uniform_loads=tuple(uniform_loads),
+        )
+        validate_design(design)
+        return design
+
+    def _save_design(self) -> None:
+        try:
+            design = self._design_from_ui()
+        except ValueError as error:
+            messagebox.showerror("Cannot save design", str(error), parent=self.root)
+            return
+
+        path = self.current_design_path
+        if path is None:
+            selected = filedialog.asksaveasfilename(
+                parent=self.root,
+                title="Save beam design",
+                defaultextension=".json",
+                filetypes=(("Beam Designer files", "*.json"), ("All files", "*.*")),
+            )
+            if not selected:
+                return
+            path = Path(selected)
+
+        try:
+            save_design(path, design)
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Save failed", str(error), parent=self.root)
+            return
+        self.current_design_path = path
+        self._update_window_title()
+
+    def _open_design(self) -> None:
+        selected = filedialog.askopenfilename(
+            parent=self.root,
+            title="Open beam design",
+            filetypes=(("Beam Designer files", "*.json"), ("All files", "*.*")),
+        )
+        if not selected:
+            return
+        path = Path(selected)
+        try:
+            design = load_design(path)
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Open failed", str(error), parent=self.root)
+            return
+
+        self._apply_design(design)
+        self.current_design_path = path
+        self._update_window_title()
+
+    def _apply_design(self, design: BeamDesign) -> None:
+        self._busy = True
+        self.support_var.set(design.support_type)
+        self.span_var.set(design.span_ft)
+        self.span_entry_var.set(f"{design.span_ft:g}")
+        self.material_var.set(design.material)
+        self._refresh_section_choices()
+        self.section_var.set(design.section_name)
+        self.deflection_ratio_var.set(f"L/{design.deflection_ratio}")
+        self._busy = False
+
+        for row in self.rows:
+            row.frame.destroy()
+        self.rows.clear()
+        for load in design.point_loads:
+            self._add_load_row(
+                "point",
+                f"{load.magnitude_kips:g}",
+                f"{load.position_ft:g}",
+            )
+        for load in design.uniform_loads:
+            self._add_load_row(
+                "uniform",
+                f"{load.magnitude_kips_per_ft:g}",
+                f"{load.start_ft:g}",
+                f"{load.end_ft:g}",
+            )
+        self._schedule_recalculate()
+
+    def _update_window_title(self) -> None:
+        name = f" — {self.current_design_path.name}" if self.current_design_path else ""
+        self.root.title(f"Beam Designer{name}")
+
+    def _export_results(self) -> None:
+        if self._analysis is None:
+            messagebox.showerror(
+                "Cannot export results",
+                "Correct the beam inputs before exporting results.",
+                parent=self.root,
+            )
+            return
+        selected = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export beam results",
+            defaultextension=".csv",
+            filetypes=(("CSV files", "*.csv"), ("All files", "*.*")),
+        )
+        if not selected:
+            return
+        try:
+            export_results_csv(selected, self._analysis)
+        except OSError as error:
+            messagebox.showerror("Export failed", str(error), parent=self.root)
+
+    def _export_calculation_sheet(self) -> None:
+        try:
+            design = self._design_from_ui()
+        except ValueError as error:
+            messagebox.showerror("Cannot create calculation sheet", str(error), parent=self.root)
+            return
+
+        analysis = analyze_beam(
+            design.span_ft,
+            design.support_type,
+            design.point_loads,
+            design.uniform_loads,
+            design.material,
+            design.section_name,
+            design.deflection_ratio,
+        )
+        selected = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Save beam calculation sheet",
+            defaultextension=".pdf",
+            filetypes=(("PDF files", "*.pdf"), ("All files", "*.*")),
+        )
+        if not selected:
+            return
+        try:
+            export_calculation_sheet_pdf(selected, design, analysis)
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Calculation sheet export failed", str(error), parent=self.root)
+
     def _schedule_recalculate(self) -> None:
         if self._update_after is not None:
             self.root.after_cancel(self._update_after)
@@ -475,6 +671,8 @@ class BeamDesignerApp:
             self.reaction_var.set("Reactions: —")
             self.suggestion_var.set("Lightest passing section: —")
             self.use_section_button.configure(state=tk.DISABLED)
+            self.export_results_button.configure(state=tk.DISABLED)
+            self.calculation_sheet_button.configure(state=tk.DISABLED)
             self._clear_check_card(self.bending_card)
             self._clear_check_card(self.deflection_card)
             self._draw_empty_plot()
@@ -482,6 +680,8 @@ class BeamDesignerApp:
 
         self.error_var.set("")
         self._analysis = analysis
+        self.export_results_button.configure(state=tk.NORMAL)
+        self.calculation_sheet_button.configure(state=tk.NORMAL)
         if self.support_var.get() == "Cantilever":
             self.reaction_var.set(
                 f"Fixed support A: {analysis.left_reaction_kips:.2f} kips upward"
