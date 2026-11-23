@@ -89,10 +89,14 @@ class BeamDesignerApp:
 
     def _configure_styles(self) -> None:
         style = ttk.Style()
-        style.configure("AppTitle.TLabel", font=("TkDefaultFont", 20, "bold"))
+        style.configure("AppTitle.TLabel", font=("TkDefaultFont", 22, "bold"))
+        style.configure("AppSubtitle.TLabel", foreground="#5d6871", font=("TkDefaultFont", 10))
+        style.configure("Panel.TLabelframe", padding=12)
+        style.configure("Panel.TLabelframe.Label", font=("TkDefaultFont", 11, "bold"))
         style.configure("Card.TLabelframe", padding=12)
         style.configure("Card.TLabelframe.Label", font=("TkDefaultFont", 11, "bold"))
         style.configure("Status.TLabel", font=("TkDefaultFont", 11, "bold"))
+        style.configure("SectionTitle.TLabel", font=("TkDefaultFont", 15, "bold"))
         style.configure(
             "Pass.Horizontal.TProgressbar",
             troughcolor="#e8edf0",
@@ -113,21 +117,28 @@ class BeamDesignerApp:
         shell = ttk.Frame(self.root, padding=14)
         shell.pack(fill=tk.BOTH, expand=True)
         shell.columnconfigure(1, weight=1)
-        shell.rowconfigure(0, weight=1)
+        shell.rowconfigure(1, weight=1)
 
-        left = ttk.Frame(shell, width=370)
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        page_header = ttk.Frame(shell)
+        page_header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 14))
+        ttk.Label(page_header, text="Beam Designer", style="AppTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            page_header,
+            text="Define the beam and loads, then review strength and deflection results.",
+            style="AppSubtitle.TLabel",
+        ).pack(anchor="w", pady=(2, 0))
+
+        left = ttk.LabelFrame(shell, text="Inputs", style="Panel.TLabelframe", width=390)
+        left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
         left.grid_propagate(False)
-        left.rowconfigure(1, weight=1)
+        left.columnconfigure(0, weight=1)
+        left.rowconfigure(0, weight=1)
 
-        ttk.Label(left, text="Beam Designer", style="AppTitle.TLabel").grid(
-            row=0, column=0, sticky="w", pady=(0, 10)
-        )
         controls_canvas = tk.Canvas(left, highlightthickness=0, width=350)
         controls_scroll = ttk.Scrollbar(left, orient=tk.VERTICAL, command=controls_canvas.yview)
         controls_canvas.configure(yscrollcommand=controls_scroll.set)
-        controls_canvas.grid(row=1, column=0, sticky="nsew")
-        controls_scroll.grid(row=1, column=1, sticky="ns")
+        controls_canvas.grid(row=0, column=0, sticky="nsew")
+        controls_scroll.grid(row=0, column=1, sticky="ns")
         self.controls = ttk.Frame(controls_canvas, padding=(2, 2, 8, 8))
         self._controls_window = controls_canvas.create_window(
             (0, 0), window=self.controls, anchor="nw"
@@ -154,9 +165,10 @@ class BeamDesignerApp:
         self._build_controls()
 
         right = ttk.Frame(shell)
-        right.grid(row=0, column=1, sticky="nsew")
-        right.rowconfigure(2, weight=1)
+        right.grid(row=1, column=1, sticky="nsew")
+        right.rowconfigure(4, weight=1)
         right.columnconfigure(0, weight=1)
+        right.columnconfigure(1, weight=1)
         self._build_results(right)
         self._build_figure(right)
 
@@ -249,8 +261,17 @@ class BeamDesignerApp:
         ).pack(fill=tk.X, pady=(2, 8))
 
     def _build_results(self, parent: ttk.Frame) -> None:
+        heading = ttk.Frame(parent)
+        heading.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(2, 10))
+        ttk.Label(heading, text="Results", style="SectionTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            heading,
+            text="Live analysis based on the current beam inputs.",
+            style="AppSubtitle.TLabel",
+        ).pack(anchor="w", pady=(2, 0))
+
         cards = ttk.Frame(parent)
-        cards.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        cards.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         cards.columnconfigure((0, 1), weight=1)
         self.bending_card = self._make_check_card(
             cards,
@@ -265,40 +286,54 @@ class BeamDesignerApp:
             "Compare maximum absolute deflection with the selected L/240 or L/360 limit.",
         )
 
-        suggestion = ttk.Frame(parent)
-        suggestion.grid(row=0, column=1, sticky="e", padx=(12, 0), pady=(4, 10))
+        recommendation = ttk.LabelFrame(
+            parent,
+            text="Section recommendation",
+            style="Card.TLabelframe",
+        )
+        recommendation.grid(row=3, column=0, sticky="ew", padx=(0, 6), pady=(0, 10))
+        recommendation.columnconfigure(0, weight=1)
         self.suggestion_var = tk.StringVar(value="Lightest passing section: —")
-        ttk.Label(suggestion, textvariable=self.suggestion_var, style="Status.TLabel").pack(
-            side=tk.LEFT, padx=(0, 8)
+        ttk.Label(
+            recommendation,
+            textvariable=self.suggestion_var,
+            style="Status.TLabel",
+            wraplength=250,
+        ).grid(
+            row=0, column=0, sticky="w", padx=(0, 8)
         )
         self.use_section_button = ttk.Button(
-            suggestion,
+            recommendation,
             text="Use section",
             command=self._use_suggested_section,
             state=tk.DISABLED,
         )
-        self.use_section_button.pack(side=tk.LEFT)
+        self.use_section_button.grid(row=0, column=1, sticky="e")
+
+        actions = ttk.LabelFrame(parent, text="Export", style="Card.TLabelframe")
+        actions.grid(row=3, column=1, sticky="ew", padx=(6, 0), pady=(0, 10))
+        actions.columnconfigure((0, 1), weight=1)
         self.export_results_button = ttk.Button(
-            suggestion,
+            actions,
             text="Export results CSV...",
             command=self._export_results,
             state=tk.DISABLED,
         )
-        self.export_results_button.pack(side=tk.LEFT, padx=(8, 0))
+        self.export_results_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
         self.calculation_sheet_button = ttk.Button(
-            suggestion,
+            actions,
             text="Calculation sheet PDF...",
             command=self._export_calculation_sheet,
             state=tk.DISABLED,
         )
-        self.calculation_sheet_button.pack(side=tk.LEFT, padx=(8, 0))
+        self.calculation_sheet_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
         reaction_card = ttk.LabelFrame(
             parent,
             text="Support reactions",
             style="Card.TLabelframe",
         )
-        reaction_card.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        reaction_card.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         self.reaction_var = tk.StringVar(value="Reactions: —")
         ttk.Label(
             reaction_card,
@@ -345,7 +380,7 @@ class BeamDesignerApp:
         figure.subplots_adjust(left=0.09, right=0.97, top=0.96, bottom=0.09, hspace=0.23)
         self.figure = figure
         self.figure_canvas = FigureCanvasTkAgg(figure, master=parent)
-        self.figure_canvas.get_tk_widget().grid(row=2, column=0, columnspan=2, sticky="nsew")
+        self.figure_canvas.get_tk_widget().grid(row=4, column=0, columnspan=2, sticky="nsew")
         self.figure_canvas.mpl_connect("button_press_event", self._on_plot_press)
         self.figure_canvas.mpl_connect("button_release_event", self._on_plot_release)
         self.figure_canvas.mpl_connect("motion_notify_event", self._on_plot_motion)

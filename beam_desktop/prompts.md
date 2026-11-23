@@ -49,3 +49,9 @@
 - Asked: Commit please.
   - Changed: Committed the Save/Open, CSV export, and Calculation sheet features with their tests and documentation.
   - Worked: Yes.
+- Asked: Organize the desktop app layout into inputs and results.
+  - Changed: Added a shared page header, an explicit Inputs panel, and a Results section ordered as checks, reactions, recommendation/exports, and diagrams.
+  - Worked: Yes. The window layout smoke test passed, all output actions remain enabled, and all 13 tests pass.
+- Asked: Commit please.
+  - Changed: Committed the desktop layout and this prompt-log entry.
+  - Worked: Yes.
