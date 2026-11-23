@@ -55,3 +55,21 @@
 - Asked: Commit please.
   - Changed: Committed the desktop layout and this prompt-log entry.
   - Worked: Yes.
+- Asked: Explain why launching app.py fails with ModuleNotFoundError for _tkinter.
+  - Changed: Identified the Homebrew Python 3.15 installation is missing its separately packaged Tkinter extension and documented the matching install and verification commands.
+  - Worked: Diagnosis confirmed by the traceback and Homebrew formula information; installation must be run on the user's Mac.
+- Asked: Diagnose the follow-up ModuleNotFoundError for numpy after installing Homebrew Tk support.
+  - Changed: Identified that the app's Python dependencies are not installed and updated the README to use a project virtual environment and install requirements.txt.
+  - Worked: Diagnosis confirmed by the traceback; dependency setup must be run on the user's Mac.
+- Asked: Whether pandas and other common Python libraries are also missing after installing Homebrew Python.
+  - Changed: Explained that Homebrew Python and the separate Tk package do not generally install third-party libraries; packages are interpreter- and environment-specific.
+  - Worked: Answered with the app's required dependencies distinguished from optional packages.
+- Asked: Clarified that another project needs pandas.
+  - Changed: Advised installing pandas into that project's active Python environment rather than adding it to Beam Designer.
+  - Worked: Provided the project-specific installation guidance.
+- Asked: Write a short README explaining the app, required packages, and startup command.
+  - Changed: Replaced the detailed README with a concise overview and setup/run instructions.
+  - Worked: Yes.
+- Asked: Commit.
+  - Changed: Committed the README and this prompt-log entry.
+  - Worked: Yes.
